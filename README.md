@@ -1,23 +1,25 @@
 # E7gz Bot
 
-A Telegram bot integrated with Google Sheets for easy data management and retrieval.
+A Telegram bot for booking football pitches with Google Sheets integration.
 
 ## Overview
 
-E7gz Bot is a Telegram bot that allows users to interact with Google Sheets directly from Telegram. Users can add data to a Google Sheet and view the contents of the sheet through simple commands.
+E7gz Bot is a Telegram bot that allows users to book football pitches through a simple, interactive conversation flow. The bot integrates with Google Sheets to store pitch information, availability, and manage bookings.
 
 ## Features
 
-- **Google Sheets Integration**: Seamlessly connects to Google Sheets API to store and retrieve data
-- **Data Management**: Add new entries to the Google Sheet with a simple command
-- **Data Retrieval**: View all data stored in the connected Google Sheet
+- **Interactive Booking Flow**: Step-by-step booking process with location, pitch, and time slot selection
+- **Google Sheets Integration**: Seamlessly connects to Google Sheets API to store and retrieve booking data
+- **Real-time Availability**: Checks and displays only available time slots for each pitch
+- **Contact Information Collection**: Collects user name and phone number for booking confirmation
 - **Logging System**: Comprehensive logging for monitoring bot activities and troubleshooting
+- **Graceful Shutdown**: Proper handling of shutdown signals for clean termination
 
 ## Commands
 
-- `/start` - Initiates the bot and displays available commands
-- `/add item value` - Adds a new item with the specified value to the Google Sheet
-- `/view` - Displays all data currently stored in the Google Sheet
+- `/start` - Initiates the booking process
+- `/book` - Alternative command to start the booking process
+- `/cancel` - Cancels the current booking process
 
 ## Technical Details
 
@@ -40,6 +42,7 @@ TELEGRAM_TOKEN=your_telegram_bot_token
 # Google Sheets Configuration
 GOOGLE_CREDENTIALS_FILE=path_to_your_google_credentials_json
 GOOGLE_SHEET_NAME=your_google_sheet_name
+GOOGLE_SHEET_ID=your_sheet_id_here  # Optional: Use either SHEET_NAME or SHEET_ID
 ```
 
 ### Project Structure
@@ -55,6 +58,24 @@ Root/
     ├── config.py        # Configuration loader
     └── logger.py        # Logging setup
 ```
+
+### Google Sheets Structure
+
+The bot requires two worksheets in your Google Sheet:
+
+1. **Pitches** - Contains information about available football pitches with columns:
+   - Location
+   - Pitch Name
+   - Time Slots (comma-separated values)
+   - Owner Phone
+
+2. **Bookings** - Stores booking information with columns:
+   - User ID
+   - User Name
+   - Phone Number
+   - Pitch Name
+   - Date/Time
+   - Status
 
 ## Setup and Installation
 
@@ -72,6 +93,21 @@ Root/
 5. Update the `.env` file with the path to your credentials file and either:
    - The name of your Google Sheet (GOOGLE_SHEET_NAME), or
    - The ID of your Google Sheet (GOOGLE_SHEET_ID) - this is the long string in the sheet URL
+6. Ensure your Google Sheet has the required worksheets (Pitches and Bookings) with the correct column structure
+
+## Booking Flow
+
+1. User starts the bot with `/start` or `/book` command
+2. Bot presents available locations
+3. User selects a location
+4. Bot presents available pitches at that location
+5. User selects a pitch
+6. Bot presents available time slots for the selected pitch
+7. User selects a time slot
+8. Bot asks for confirmation
+9. User confirms the booking
+10. Bot collects user's name and phone number
+11. Booking is confirmed and stored in the Google Sheet
 
 ## License
 
