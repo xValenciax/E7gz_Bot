@@ -44,7 +44,7 @@ try:
     except gspread.exceptions.WorksheetNotFound:
         # Create Pitches worksheet with headers if it doesn't exist
         pitches_sheet = workbook.add_worksheet(title='Pitches', rows=100, cols=20)
-        pitches_sheet.append_row(['Pitch Name', 'Location', 'Time Slots', 'Owner Phone'])
+        pitches_sheet.append_row(['Location', 'Pitch Name', 'Time Slots', 'Owner Phone'])
         logger.info('Created new Pitches worksheet')
     
     try:
@@ -129,42 +129,14 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.warning(f'User {query.from_user.id} selected location with no pitches: {location}')
             return ConversationHandler.END
         
-        # Get all available time slots for this location
-        available_slots = {}
-        for pitch in location_pitches:
-            pitch_name = pitch['Pitch Name']
-            slots = [slot.strip() for slot in pitch['Time Slots'].split(',')]
-            for slot in slots:
-                if slot not in available_slots:
-                    available_slots[slot] = []
-                available_slots[slot].append(pitch_name)
-        
-        # Check which slots are already booked
-        bookings = bookings_sheet.get_all_records()
-        for booking in bookings:
-            if booking['Status'] == 'Booked' and booking['Pitch Name'] in [p['Pitch Name'] for p in location_pitches]:
-                slot = booking['Date/Time']
-                if slot in available_slots and booking['Pitch Name'] in available_slots[slot]:
-                    available_slots[slot].remove(booking['Pitch Name'])
-                    # If no more pitches available for this slot, remove the slot
-                    if not available_slots[slot]:
-                        del available_slots[slot]
-        
-        if not available_slots:
-            await query.edit_message_text(f"No available time slots in {location}. Please try another location.")
-            logger.warning(f'User {query.from_user.id} selected location with no Time Slots: {location}')
-            return ConversationHandler.END
-        
-        # Create inline keyboard with time slot buttons
+        # Create inline keyboard with pitch buttons
         keyboard = []
-        sorted_slots = sorted(available_slots.keys())
-        for i in range(0, len(sorted_slots), 2):  # 2 buttons per row
+        pitch_names = sorted([pitch['Pitch Name'] for pitch in location_pitches])
+        for i in range(0, len(pitch_names), 2):  # 2 buttons per row
             row = []
-            slot = sorted_slots[i]
-            row.append(InlineKeyboardButton(slot, callback_data=f"slot:{slot}"))
-            if i + 1 < len(sorted_slots):
-                slot = sorted_slots[i+1]
-                row.append(InlineKeyboardButton(slot, callback_data=f"slot:{slot}"))
+            row.append(InlineKeyboardButton(pitch_names[i], callback_data=f"pitch:{pitch_names[i]}"))
+            if i + 1 < len(pitch_names):
+                row.append(InlineKeyboardButton(pitch_names[i+1], callback_data=f"pitch:{pitch_names[i+1]}"))
             keyboard.append(row)
         
         # Add cancel button
@@ -172,82 +144,15 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
-            f"You selected {location}. Please choose an available time slot:",
+            f"You selected {location}. Please choose a pitch:",
             reply_markup=reply_markup
         )
         
         logger.info(f'User {query.from_user.id} selected location: {location}')
-        return TIMESLOT
-    except Exception as e:
-        user_id = update.callback_query.from_user.id if update.callback_query else 'Unknown'
-        logger.error(f'Error in handle_location for user {user_id}: {str(e)}')
-        await update.callback_query.edit_message_text('An error occurred while processing your request.')
-        return ConversationHandler.END
-
-async def handle_timeslot(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        query = update.callback_query
-        await query.answer()
-        
-        if query.data == "cancel":
-            await query.edit_message_text("Booking cancelled. Send /start to begin again.")
-            logger.info(f'User {query.from_user.id} cancelled booking')
-            return ConversationHandler.END
-        
-        # Extract time slot from callback data
-        time_slot = query.data.split(':')[1]
-        context.user_data['time_slot'] = time_slot
-        location = context.user_data['location']
-        
-        # Find available pitches for this location and time slot
-        all_pitches = pitches_sheet.get_all_records()
-        location_pitches = [pitch for pitch in all_pitches if pitch['Location'] == location]
-        
-        available_pitches = []
-        for pitch in location_pitches:
-            slots = [slot.strip() for slot in pitch['Time Slots'].split(',')]
-            if time_slot in slots:
-                available_pitches.append(pitch['Pitch Name'])
-        
-        # Check which pitches are already booked for this time slot
-        bookings = bookings_sheet.get_all_records()
-        for booking in bookings:
-            if (booking['Status'] == 'Booked' and 
-                booking['Date/Time'] == time_slot and 
-                booking['Pitch Name'] in available_pitches):
-                available_pitches.remove(booking['Pitch Name'])
-        
-        if not available_pitches:
-            await query.edit_message_text(
-                f"Sorry, all pitches in {location} for {time_slot} are now booked. Please try another time slot."
-            )
-            logger.warning(f'User {query.from_user.id} selected time slot with no available pitches: {time_slot}')
-            return ConversationHandler.END
-        
-        # Create keyboard with available pitches
-        keyboard = []
-        for i in range(0, len(available_pitches), 2):  # 2 buttons per row
-            row = []
-            row.append(InlineKeyboardButton(available_pitches[i], callback_data=f"pitch:{available_pitches[i]}"))
-            if i + 1 < len(available_pitches):
-                row.append(InlineKeyboardButton(available_pitches[i+1], callback_data=f"pitch:{available_pitches[i+1]}"))
-            keyboard.append(row)
-        
-        # Add cancel button
-        keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(
-            f"You selected {time_slot} at {location}.\n\n"
-            f"Please select a pitch:",
-            reply_markup=reply_markup
-        )
-        
-        logger.info(f'User {query.from_user.id} selected time slot: {time_slot}')
         return PITCH_SELECTION
     except Exception as e:
         user_id = update.callback_query.from_user.id if update.callback_query else 'Unknown'
-        logger.error(f'Error in handle_timeslot for user {user_id}: {str(e)}')
+        logger.error(f'Error in handle_location for user {user_id}: {str(e)}')
         await update.callback_query.edit_message_text('An error occurred while processing your request.')
         return ConversationHandler.END
 
@@ -265,18 +170,88 @@ async def handle_pitch_selection(update: Update, context: ContextTypes.DEFAULT_T
         selected_pitch = query.data.split(':')[1]
         context.user_data['pitch'] = selected_pitch
         location = context.user_data['location']
-        time_slot = context.user_data['time_slot']
         
-        # Check one more time if the pitch is still available
+        # Get time slots for the selected pitch
+        all_pitches = pitches_sheet.get_all_records()
+        pitch_data = next((pitch for pitch in all_pitches if pitch['Pitch Name'] == selected_pitch), None)
+        
+        if not pitch_data:
+            await query.edit_message_text(f"Sorry, could not find data for {selected_pitch}. Please try again.")
+            logger.warning(f'User {query.from_user.id} selected a pitch that does not exist: {selected_pitch}')
+            return ConversationHandler.END
+        
+        # Get available time slots for this pitch
+        available_slots = [slot.strip() for slot in pitch_data['Time Slots'].split(',')]
+        
+        # Check which slots are already booked for this pitch
+        bookings = bookings_sheet.get_all_records()
+        booked_slots = [booking['Date/Time'] for booking in bookings 
+                       if booking['Status'] == 'Booked' and booking['Pitch Name'] == selected_pitch]
+        
+        # Remove booked slots from available slots
+        available_slots = [slot for slot in available_slots if slot not in booked_slots]
+        
+        if not available_slots:
+            await query.edit_message_text(
+                f"Sorry, all time slots for {selected_pitch} at {location} are booked. Please select another pitch."
+            )
+            logger.warning(f'User {query.from_user.id} selected pitch with no available time slots: {selected_pitch}')
+            return ConversationHandler.END
+        
+        # Create keyboard with available time slots
+        keyboard = []
+        sorted_slots = sorted(available_slots)
+        for i in range(0, len(sorted_slots), 2):  # 2 buttons per row
+            row = []
+            row.append(InlineKeyboardButton(sorted_slots[i], callback_data=f"slot:{sorted_slots[i]}"))
+            if i + 1 < len(sorted_slots):
+                row.append(InlineKeyboardButton(sorted_slots[i+1], callback_data=f"slot:{sorted_slots[i+1]}"))
+            keyboard.append(row)
+        
+        # Add cancel button
+        keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            f"You selected {selected_pitch} at {location}.\n\n"
+            f"Please select a time slot:",
+            reply_markup=reply_markup
+        )
+        
+        logger.info(f'User {query.from_user.id} selected pitch: {selected_pitch}')
+        return TIMESLOT
+    except Exception as e:
+        user_id = update.callback_query.from_user.id if update.callback_query else 'Unknown'
+        logger.error(f'Error in handle_timeslot for user {user_id}: {str(e)}')
+        await update.callback_query.edit_message_text('An error occurred while processing your request.')
+        return ConversationHandler.END
+
+async def handle_timeslot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        query = update.callback_query
+        await query.answer()
+        
+        if query.data == "cancel":
+            await query.edit_message_text("Booking cancelled. Send /start to begin again.")
+            logger.info(f'User {query.from_user.id} cancelled booking')
+            return ConversationHandler.END
+        
+        # Extract time slot from callback data
+        time_slot = query.data.split(':')[1]
+        context.user_data['time_slot'] = time_slot
+        location = context.user_data['location']
+        selected_pitch = context.user_data['pitch']
+        
+        # Check one more time if the time slot is still available for this pitch
         bookings = bookings_sheet.get_all_records()
         for booking in bookings:
             if (booking['Status'] == 'Booked' and 
                 booking['Date/Time'] == time_slot and 
                 booking['Pitch Name'] == selected_pitch):
                 await query.edit_message_text(
-                    f"Sorry, {selected_pitch} at {time_slot} has just been booked by someone else. Please try again."
+                    f"Sorry, the time slot {time_slot} for {selected_pitch} has just been booked by someone else. Please try again."
                 )
-                logger.warning(f'User {query.from_user.id} attempted to book an already booked pitch: {selected_pitch} at {time_slot}')
+                logger.warning(f'User {query.from_user.id} attempted to book an already booked time slot: {time_slot} for {selected_pitch}')
                 return ConversationHandler.END
         
         # Create confirmation keyboard
@@ -287,12 +262,12 @@ async def handle_pitch_selection(update: Update, context: ContextTypes.DEFAULT_T
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
-            f"You selected {selected_pitch} at {location} for {time_slot}.\n\n"
+            f"You selected {time_slot} for {selected_pitch} at {location}.\n\n"
             f"Would you like to confirm your booking?",
             reply_markup=reply_markup
         )
         
-        logger.info(f'User {query.from_user.id} selected pitch: {selected_pitch}')
+        logger.info(f'User {query.from_user.id} selected time slot: {time_slot} for pitch: {selected_pitch}')
         return CONFIRMATION
     except Exception as e:
         user_id = update.callback_query.from_user.id if update.callback_query else 'Unknown'
@@ -323,9 +298,9 @@ async def handle_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE
                 booking['Date/Time'] == time_slot and 
                 booking['Pitch Name'] == pitch):
                 await query.edit_message_text(
-                    f"Sorry, {pitch} at {time_slot} has just been booked by someone else. Please try again."
+                    f"Sorry, the time slot {time_slot} for {pitch} has just been booked by someone else. Please try again."
                 )
-                logger.warning(f'User {user_id} attempted to book an already booked slot: {pitch} at {time_slot}')
+                logger.warning(f'User {user_id} attempted to book an already booked time slot: {time_slot} for pitch {pitch}')
                 return ConversationHandler.END
         
         # Store booking details in context for later use
@@ -338,7 +313,7 @@ async def handle_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         # Ask for contact information
         await query.edit_message_text(
-            f"Your booking for {pitch} at {location} for {time_slot} is almost complete.\n\n"
+            f"Your booking for {time_slot} at {pitch} ({location}) is almost complete.\n\n"
             f"Please enter your real name to continue:"
         )
         
@@ -381,7 +356,7 @@ async def handle_contact_info(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         await update.message.reply_text(
             f"✅ Your booking is confirmed!\n\n"
-            f"You've booked {booking_details['pitch']} at {booking_details['location']} for {booking_details['time_slot']}.\n\n"
+            f"You've booked {booking_details['time_slot']} at {booking_details['pitch']} ({booking_details['location']}).\n\n"
             f"Your contact information has been saved.\n\n"
             f"Thank you for using E7gz Bot! Send /start to make another booking."
         )
@@ -415,8 +390,8 @@ def main():
             entry_points=[CommandHandler("start", start), CommandHandler("book", book_command)],
             states={
                 LOCATION: [CallbackQueryHandler(handle_location)],
-                TIMESLOT: [CallbackQueryHandler(handle_timeslot)],
                 PITCH_SELECTION: [CallbackQueryHandler(handle_pitch_selection)],
+                TIMESLOT: [CallbackQueryHandler(handle_timeslot)],
                 CONFIRMATION: [CallbackQueryHandler(handle_confirmation)],
                 CONTACT_INFO: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_info)],
             },
@@ -426,6 +401,29 @@ def main():
         application.add_handler(conv_handler)
 
         logger.info('Bot started successfully')
+        
+        # Set up signal handlers for graceful shutdown
+        import signal
+        import sys
+        
+        def shutdown_handler(signum, frame):
+            logger.info('Shutdown signal received, closing connections...')
+            # Perform cleanup operations
+            try:
+                # Close Google Sheets connection if needed
+                if 'gc' in globals() and gc is not None:
+                    logger.info('Closing Google Sheets connection')
+                # Any other cleanup needed
+            except Exception as e:
+                logger.error(f'Error during shutdown: {str(e)}')
+            finally:
+                logger.info('Bot shutdown complete')
+                sys.exit(0)
+        
+        # Register signal handlers
+        signal.signal(signal.SIGINT, shutdown_handler)  # Ctrl+C
+        signal.signal(signal.SIGTERM, shutdown_handler)  # Termination signal
+        
         # Start the bot
         application.run_polling()
     except Exception as e:
