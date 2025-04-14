@@ -69,7 +69,9 @@ Root/
 2. Enable Google Sheets API and Google Drive API
 3. Create a service account and download the JSON credentials file
 4. Share your Google Sheet with the service account email
-5. Update the `.env` file with the path to your credentials file and the name of your Google Sheet
+5. Update the `.env` file with the path to your credentials file and either:
+   - The name of your Google Sheet (GOOGLE_SHEET_NAME), or
+   - The ID of your Google Sheet (GOOGLE_SHEET_ID) - this is the long string in the sheet URL
 
 ## License
 
