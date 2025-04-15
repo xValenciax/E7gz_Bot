@@ -43,7 +43,7 @@ class ConfirmationState(BookingState):
             # Ask for contact information
             await query.edit_message_text(
                 f"Great! You're booking {time_slot} at {pitch_name} in {location}.\n\n"
-                f"Please enter your phone number to complete the booking:"
+                f"Please enter your full name to complete the booking:"
             )
             
             self.logger.info(f'User {query.from_user.id} confirmed booking')

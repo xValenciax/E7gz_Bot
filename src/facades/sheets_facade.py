@@ -125,11 +125,11 @@ class SheetsFacade:
         try:
             self.bookings_sheet.append_row([
                 user_id, 
+                user_name,
+                phone_number,
                 pitch_name, 
                 time_slot, 
-                status,
-                phone_number,
-                user_name
+                status
             ])
             return True
         except Exception as e:

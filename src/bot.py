@@ -1,20 +1,20 @@
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler, CallbackQueryHandler
-from config import TELEGRAM_TOKEN, GOOGLE_CREDENTIALS_FILE, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID, GOOGLE_SCOPES
-from logger import setup_logger
+from src.config import TELEGRAM_TOKEN, GOOGLE_CREDENTIALS_FILE, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID, GOOGLE_SCOPES
+from src.logger import setup_logger
 
 # Import components from modular structure
-from facades.sheets_facade import SheetsFacade
-from observers.notification_manager import NotificationManager
-from states.state_manager import StateManager
-from commands.booking_commands import BookingCommand, CancelCommand
+from src.facades.sheets_facade import SheetsFacade
+from src.observers.notification_manager import NotificationManager
+from src.states.state_manager import StateManager
+from src.commands.booking_commands import BookingCommand, CancelCommand
 
 # Setup logging
 logger = setup_logger()
 
 # Define conversation states
-LOCATION, PITCH_SELECTION, TIMESLOT, CONFIRMATION, CONTACT_INFO = range(5)
+LOCATION, PITCH_SELECTION, TIMESLOT, CONFIRMATION, CONTACT_INFO_NAME, CONTACT_INFO_PHONE = range(6)
 
 # Initialize components directly
 try:
@@ -28,6 +28,17 @@ try:
     
     # Create observer
     notification_manager = NotificationManager()
+    # booking_event = 
+    
+    # Add user notifier
+    from src.observers.notification_manager import UserNotifier, AdminNotifier
+    notification_manager.add_observer(UserNotifier())
+    
+    # Add admin notifier if admin chat IDs are configured
+    from src.config import ADMIN_CHAT_IDS
+    if ADMIN_CHAT_IDS:
+        notification_manager.add_observer(AdminNotifier(ADMIN_CHAT_IDS))
+        logger.info(f'Added AdminNotifier with {len(ADMIN_CHAT_IDS)} admin chat IDs')
     
     # Create state manager
     state_manager = StateManager(sheets_facade, notification_manager)
@@ -88,7 +99,8 @@ def main():
                 PITCH_SELECTION: [CallbackQueryHandler(handle_pitch_selection)],
                 TIMESLOT: [CallbackQueryHandler(handle_timeslot)],
                 CONFIRMATION: [CallbackQueryHandler(handle_confirmation)],
-                CONTACT_INFO: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_info)],
+                CONTACT_INFO_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_info)],
+                CONTACT_INFO_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_info)],
             },
             fallbacks=[CommandHandler("cancel", cancel)],
         )

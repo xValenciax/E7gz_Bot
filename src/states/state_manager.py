@@ -7,7 +7,8 @@ from .location_state import LocationState
 from .pitch_selection_state import PitchSelectionState
 from .time_slot_state import TimeSlotState
 from .confirmation_state import ConfirmationState
-from .contact_info_state import ContactInfoState
+from .contact_info_state import ContactInfoState, NAME, PHONE
+from ..observers.notification_manager import NotificationManager
 
 class StateManager:
     """Manages the different states of the booking conversation"""
