@@ -65,13 +65,6 @@ class ContactInfoState(BookingState):
 
             # Assuming notification_manager.notify is an async method that sends notifications via emai
             await self.notification_manager.notify(booking_event, context)  
-
-            await update.message.reply_text(
-                f"✅ Your booking is confirmed!\n\n"
-                f"You've booked {context.user_data['time_slot']} at {context.user_data['pitch_name']} ({context.user_data['location']}).\n\n"
-                f"Your contact information has been saved.\n\n"
-                f"Thank you for using E7gz Bot! Send /start to make another booking."
-            )
             
             self.logger.info(f'User {user.id} successfully completed booking with contact info')
             return ConversationHandler.END

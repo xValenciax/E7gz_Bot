@@ -1,7 +1,7 @@
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, ConversationHandler, CallbackQueryHandler
-from src.config import TELEGRAM_TOKEN, GOOGLE_CREDENTIALS_FILE, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID, GOOGLE_SCOPES
+from src.config import TELEGRAM_TOKEN, GOOGLE_CREDENTIALS_FILE, GOOGLE_SHEET_NAME, GOOGLE_SHEET_ID, GOOGLE_SCOPES, ADMIN_CHAT_IDS
 from src.logger import setup_logger
 
 # Import components from modular structure
@@ -9,6 +9,7 @@ from src.facades.sheets_facade import SheetsFacade
 from src.observers.notification_manager import NotificationManager
 from src.states.state_manager import StateManager
 from src.commands.booking_commands import BookingCommand, CancelCommand
+from src.observers.notification_manager import UserNotifier, AdminNotifier
 
 # Setup logging
 logger = setup_logger()
@@ -28,17 +29,14 @@ try:
     
     # Create observer
     notification_manager = NotificationManager()
-    # booking_event = 
     
     # Add user notifier
-    from src.observers.notification_manager import UserNotifier, AdminNotifier
     notification_manager.add_observer(UserNotifier())
     
     # Add admin notifier if admin chat IDs are configured
-    from src.config import ADMIN_CHAT_IDS
     if ADMIN_CHAT_IDS:
         notification_manager.add_observer(AdminNotifier(ADMIN_CHAT_IDS))
-        logger.info(f'Added AdminNotifier with {len(ADMIN_CHAT_IDS)} admin chat IDs')
+        logger.info(f'Added AdminNotifier with {len(ADMIN_CHAT_IDS)} admin chat IDs: {ADMIN_CHAT_IDS}')
     
     # Create state manager
     state_manager = StateManager(sheets_facade, notification_manager)
