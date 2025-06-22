@@ -86,6 +86,10 @@ async def handle_contact_info(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 def main():
     try:
+        # Check if token is available
+        if not TELEGRAM_TOKEN:
+            raise ValueError("TELEGRAM_TOKEN environment variable is not set")
+            
         # Create application
         application = Application.builder().token(TELEGRAM_TOKEN).build()
 
@@ -101,6 +105,7 @@ def main():
                 CONTACT_INFO_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_info)],
             },
             fallbacks=[CommandHandler("cancel", cancel)],
+            per_message=True,
         )
         
         application.add_handler(conv_handler)
