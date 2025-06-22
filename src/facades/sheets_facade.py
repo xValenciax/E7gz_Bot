@@ -115,7 +115,11 @@ class SheetsFacade:
 
     def is_slot_available(self, pitch_name: str, time_slot: str) -> bool:
         """Check if a specific time slot is available for a pitch"""
-        bookings = self.bookings_sheet.get_all_records()
+        try:
+            bookings = self.bookings_sheet.get_all_records()
+        except IndexError:  # Handles empty sheet case
+            bookings = []
+            
         for booking in bookings:
             if (booking['Status'] == 'Booked' and 
                 booking['Date/Time'] == time_slot and 
