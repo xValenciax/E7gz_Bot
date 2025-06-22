@@ -25,9 +25,9 @@ class UserNotifier(BookingObserver):
         try:
             await context.bot.send_message(
                 chat_id=event.user_id,
-                text=f"✅ Your booking is confirmed!\n\n"
-                     f"You've booked {event.time_slot} at {event.pitch_name} ({event.location}).\n\n"
-                     f"Thank you for using E7gz Bot! Send /start to make another booking."
+                text=f"✅ تم تأكيد الحجز! \n\n"
+                     f"انت حجزت الساعة {event.time_slot} في ملعب {event.pitch_name} في {event.location}.\n\n"
+                     f"شكراً لاستخدام البوت E7gz! ارسل /start لبدء حجز آخر."
             )
             self.logger.info(f'Sent booking confirmation to user {event.user_id}')
         except Exception as e:
@@ -46,11 +46,11 @@ class AdminNotifier(BookingObserver):
         
         try:
             admin_message = (
-                f"🔔 New Booking Alert!\n\n"
-                f"User: {event.user_name} (ID: {event.user_id})\n"
-                f"Phone: {event.phone_number}\n"
-                f"Booked: {event.pitch_name} at {event.location}\n"
-                f"Time: {event.time_slot}"
+                f"🔔 حجز جديد! \n\n"
+                f"صاحب الحجز: {event.user_name} (ID: {event.user_id})\n"
+                f"رقم التلفون: {event.phone_number}\n"
+                f"الملعب: {event.pitch_name} في {event.location}\n"
+                f"الساعة: {event.time_slot}"
             )
             
             for admin_id in self.admin_chat_ids:

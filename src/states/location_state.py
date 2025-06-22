@@ -23,7 +23,11 @@ class LocationState(BookingState):
             location_pitches = self.sheets_facade.get_pitches_by_location(location)
             
             if not location_pitches:
-                await query.edit_message_text(f"No pitches available in {location}. Please try another location.")
+                await query.edit_message_text(
+                    f"مفيش ملاعب لسة في منطقة {location}.\n"
+                    f"هنضيف ملاعب فالمستقبل ان شاء الله.\n"
+                    f"دلوقتي تقدر تجرب منطقة تانية."
+                )
                 self.logger.warning(f'User {query.from_user.id} selected location with no pitches: {location}')
                 return ConversationHandler.END
             
@@ -38,11 +42,11 @@ class LocationState(BookingState):
                 keyboard.append(row)
             
             # Add cancel button
-            keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
+            keyboard.append([InlineKeyboardButton("الغاء العملية", callback_data="cancel")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await query.edit_message_text(
-                f"You selected {location}. Please choose a pitch:",
+                f"انت اخترت منطقة {location}.\n\nبرجاء اختيار الملعب: ",
                 reply_markup=reply_markup
             )
             

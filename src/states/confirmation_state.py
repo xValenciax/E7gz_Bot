@@ -1,5 +1,6 @@
 # State Pattern - Confirmation State
 import logging
+import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 from .base import BookingState
@@ -17,14 +18,14 @@ class ConfirmationState(BookingState):
             await query.answer()
             
             if query.data == "cancel":
-                await query.edit_message_text('Booking cancelled. Send /start to begin again.')
+                await query.edit_message_text('تم الغاء العملية. أرسل /start للبدء من جديد.')
                 return ConversationHandler.END
             
             # Extract confirmation from callback data
             confirmation = query.data.split(':')[1]
             
             if confirmation != "yes":
-                await query.edit_message_text('Booking cancelled. Send /start to begin again.')
+                await query.edit_message_text('تم الغاء العملية. أرسل /start للبدء من جديد.')
                 return ConversationHandler.END
             
             # Get booking details from context
@@ -35,15 +36,18 @@ class ConfirmationState(BookingState):
             # Double-check availability
             if not self.sheets_facade.is_slot_available(pitch_name, time_slot):
                 await query.edit_message_text(
-                    f"Sorry, the time slot {time_slot} for {pitch_name} is no longer available. Please try another time slot."
+                    f"للأسف الوقت اللي انت اخترته {time_slot} للملعب {pitch_name}.\n"
+                    f"غير متوفر حاليا.\n"
+                    f"جرب تختار معاد تاني.",
                 )
                 self.logger.warning(f'User {query.from_user.id} confirmed unavailable time slot: {time_slot}')
                 return ConversationHandler.END
             
             # Ask for contact information
             await query.edit_message_text(
-                f"Great! You're booking {time_slot} at {pitch_name} in {location}.\n\n"
-                f"Please enter your full name to complete the booking:"
+                f"انت حاليا عايز تحجز ملعب {pitch_name}.\n\n"
+                f"في {location} في وقت {time_slot}.\n\n"
+                f"الرجاء إدخال الاسم بالكامل للاتمام عملية الحجز:"
             )
             
             self.logger.info(f'User {query.from_user.id} confirmed booking')

@@ -24,7 +24,8 @@ class ContactInfoState(BookingState):
             if 'user_name' not in context.user_data:
                 context.user_data['user_name'] = message_text
                 await update.message.reply_text(
-                    f"Thank you, {message_text}. Now please enter your phone number:"
+                    f"شكرا ليك, {message_text}.\n\n"
+                    f"الآن برجاء إدخال رقم تلفونك:"
                 )
                 self.logger.info(f'User {user.id} provided name: {message_text}')
                 return NAME
@@ -45,7 +46,7 @@ class ContactInfoState(BookingState):
 
             if not success:
                     await update.message.reply_text(
-                        "Sorry, there was an error processing your booking. Please try again later."
+                        "للأسف حصل عطل اثناء اتمام العملية. حاول مرة تانية."
                     )
                     self.logger.error(f'Failed to add booking for user {user.id}')
                     return ConversationHandler.END

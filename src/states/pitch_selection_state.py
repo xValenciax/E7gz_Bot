@@ -16,7 +16,7 @@ class PitchSelectionState(BookingState):
             await query.answer()
             
             if query.data == "cancel":
-                await query.edit_message_text('Booking cancelled. Send /start to begin again.')
+                await query.edit_message_text('تم الغاء العملية. أرسل /start للبدء من جديد.')
                 return ConversationHandler.END
             
             # Extract pitch name from callback data
@@ -28,7 +28,10 @@ class PitchSelectionState(BookingState):
             time_slots = self.sheets_facade.get_available_time_slots(pitch_name)
             
             if not time_slots:
-                await query.edit_message_text(f"No available time slots for {pitch_name}. Please try another pitch.")
+                await query.edit_message_text(
+                    f"حاليا مفيش ساعات متاحة في ملعب {pitch_name}.\n\n"
+                    f"ممكن تجرب في وقت تاني او تشوف ملعب تاني."
+                )
                 self.logger.warning(f'User {query.from_user.id} selected pitch with no available slots: {pitch_name}')
                 return ConversationHandler.END
             
@@ -37,16 +40,19 @@ class PitchSelectionState(BookingState):
             for i in range(0, len(time_slots), 2):  # 2 buttons per row
                 row = []
                 row.append(InlineKeyboardButton(time_slots[i], callback_data=f"time:{time_slots[i]}"))
+                # Check if there's a second slot in this row before adding it
                 if i + 1 < len(time_slots):
                     row.append(InlineKeyboardButton(time_slots[i+1], callback_data=f"time:{time_slots[i+1]}"))
                 keyboard.append(row)
             
             # Add cancel button
-            keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
+            keyboard.append([InlineKeyboardButton("الغاء العملية", callback_data="cancel")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await query.edit_message_text(
-                f"You selected {pitch_name} in {location}. Please choose a time slot:",
+                f"انت اخترت ملعب {pitch_name}.\n\n"
+                f"في منطقة {location}.\n\n"
+                "برجاء اختيار وقت الحجز المناسب: ",
                 reply_markup=reply_markup
             )
             

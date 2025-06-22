@@ -16,7 +16,7 @@ class TimeSlotState(BookingState):
             await query.answer()
             
             if query.data == "cancel":
-                await query.edit_message_text('Booking cancelled. Send /start to begin again.')
+                await query.edit_message_text('تم الغاء العملية. أرسل /start للبدء من جديد.')
                 return ConversationHandler.END
             
             # Extract time slot from callback data
@@ -28,21 +28,25 @@ class TimeSlotState(BookingState):
             # Check if the time slot is still available (double-check)
             if not self.sheets_facade.is_slot_available(pitch_name, time_slot):
                 await query.edit_message_text(
-                    f"Sorry, the time slot {time_slot} for {pitch_name} is no longer available. Please try another time slot."
+                    f"للأسف المعاد اللي انت اخترته {time_slot}.\n"
+                    f"للملعب {pitch_name}.\n"
+                    f"غير متوفر حاليا.\n"
+                    f" برجاء اختيار معاد آخر."
                 )
                 self.logger.warning(f'User {query.from_user.id} selected unavailable time slot: {time_slot}')
                 return ConversationHandler.END
             
             # Create confirmation buttons
             keyboard = [
-                [InlineKeyboardButton("Confirm Booking", callback_data="confirm:yes")],
-                [InlineKeyboardButton("Cancel", callback_data="cancel")]
+                [InlineKeyboardButton("تأكيد الحجز", callback_data="confirm:yes")],
+                [InlineKeyboardButton("الغاء العملية", callback_data="cancel")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await query.edit_message_text(
-                f"You selected {time_slot} at {pitch_name} in {location}.\n\n"
-                f"Please confirm your booking:",
+                f"انت اخترت الساعة {time_slot}\n\n"
+                f"في ملعب {pitch_name} في {location}.\n\n"
+                f"برجاء تأكيد حجزك: ",
                 reply_markup=reply_markup
             )
             

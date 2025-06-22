@@ -27,14 +27,14 @@ class StateManager:
     async def start_booking(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         try:
             user = update.effective_user
-            welcome_message = f'Hello {user.first_name}! Welcome to E7gz Bot - your football pitch booking assistant.'
+            welcome_message = f'أهلا بيك يا {user.first_name}!.\n\n أنا E7gz بوت حجز الملاعب!'
             
             # Get unique locations from the Pitches sheet
             locations = self.sheets_facade.get_unique_locations()
             
             if not locations:
                 await update.message.reply_text(
-                    f"Hello {user.first_name}! No locations are currently available. Please try again later."
+                    f"للأسف مفيش مناطق متاح فيها ملاعب حاليا ,قريبا ان شاء الله هنبدأ نضيف ملاعب جديدة"
                 )
                 self.logger.warning(f'User {user.id} attempted to book but no locations available')
                 return ConversationHandler.END
@@ -51,7 +51,8 @@ class StateManager:
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await update.message.reply_text(
-                f"{welcome_message}\n\nPlease select a location to book a football pitch:",
+                f"{welcome_message}\n\n"
+                "أيه المنطقة اللي حابب تحجز فيها:",
                 reply_markup=reply_markup
             )
             

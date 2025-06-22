@@ -102,10 +102,14 @@ class SheetsFacade:
         available_slots = [slot.strip() for slot in pitch_data['Time Slots'].split(',')]
         
         # Check which slots are already booked
-        bookings = self.bookings_sheet.get_all_records()
+        try:
+            bookings = self.bookings_sheet.get_all_records()
+        except IndexError:  # Handles empty sheet case
+            bookings = []
+
         booked_slots = [booking['Date/Time'] for booking in bookings 
                        if booking['Status'] == 'Booked' and booking['Pitch Name'] == pitch_name]
-        
+
         # Remove booked slots from available slots
         return [slot for slot in available_slots if slot not in booked_slots]
 

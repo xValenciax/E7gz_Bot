@@ -22,5 +22,5 @@ class CancelCommand(Command):
     async def execute(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         user = update.effective_user
         self.logger.info(f'User {user.id} cancelled the conversation')
-        await update.message.reply_text('Booking cancelled. Send /start to begin again.')
+        await update.message.reply_text('تم الغاء العملية. أرسل /start للبدء من جديد.')
         return ConversationHandler.END
