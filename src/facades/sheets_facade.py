@@ -51,6 +51,9 @@ class SheetsFacade:
 
     def _initialize_worksheets(self):
         """Initialize or create required worksheets"""
+        if not self.workbook:
+            raise RuntimeError("Workbook not initialized. Connection to Google Sheets failed.")
+            
         try:
             self.pitches_sheet = self.workbook.worksheet('Pitches')
             self.logger.info('Accessed Pitches worksheet')
@@ -69,10 +72,13 @@ class SheetsFacade:
             if 'Phone Number' not in headers or 'User Name' not in headers:
                 # Add the new columns if they don't exist
                 if 'Phone Number' not in headers:
-                    self.bookings_sheet.append_col(['Phone Number'] + [''] * (len(self.bookings_sheet.col_values(1)) - 1))
+                    # Use insert_cols instead of append_col
+                    col_count = len(self.bookings_sheet.col_values(1))
+                    self.bookings_sheet.insert_cols([['Phone Number'] + [''] * (col_count - 1)], 5)
                     self.logger.info('Added Phone Number column to Bookings worksheet')
                 if 'User Name' not in headers:
-                    self.bookings_sheet.append_col(['User Name'] + [''] * (len(self.bookings_sheet.col_values(1)) - 1))
+                    col_count = len(self.bookings_sheet.col_values(1))
+                    self.bookings_sheet.insert_cols([['User Name'] + [''] * (col_count - 1)], 6)
                     self.logger.info('Added User Name column to Bookings worksheet')
         except gspread.exceptions.WorksheetNotFound:
             # Create Bookings worksheet with headers if it doesn't exist
@@ -82,54 +88,71 @@ class SheetsFacade:
 
     def get_unique_locations(self) -> List[str]:
         """Get unique locations from the Pitches sheet"""
+        if not self.pitches_sheet:
+            return []
         all_pitches = self.pitches_sheet.get_all_records()
-        return sorted(set(pitch['Location'] for pitch in all_pitches))
+        return sorted(set(str(pitch.get('Location', '')) for pitch in all_pitches))
 
     def get_pitches_by_location(self, location: str) -> List[Dict]:
         """Get pitches for a specific location"""
+        if not self.pitches_sheet:
+            return []
         all_pitches = self.pitches_sheet.get_all_records()
-        return [pitch for pitch in all_pitches if pitch['Location'] == location]
+        return [pitch for pitch in all_pitches if pitch.get('Location') == location]
 
     def get_available_time_slots(self, pitch_name: str) -> List[str]:
         """Get available time slots for a specific pitch"""
+        if not self.pitches_sheet:
+            return []
         # Get all time slots for the pitch
         all_pitches = self.pitches_sheet.get_all_records()
-        pitch_data = next((pitch for pitch in all_pitches if pitch['Pitch Name'] == pitch_name), None)
+        pitch_data = next((pitch for pitch in all_pitches if pitch.get('Pitch Name') == pitch_name), None)
         
         if not pitch_data:
             return []
         
-        available_slots = [slot.strip() for slot in pitch_data['Time Slots'].split(',')]
+        time_slots = pitch_data.get('Time Slots', '')
+        if not time_slots:
+            return []
+            
+        available_slots = [slot.strip() for slot in str(time_slots).split(',')]
         
         # Check which slots are already booked
         try:
+            if not self.bookings_sheet:
+                return available_slots
             bookings = self.bookings_sheet.get_all_records()
         except IndexError:  # Handles empty sheet case
             bookings = []
 
-        booked_slots = [booking['Date/Time'] for booking in bookings 
-                       if booking['Status'] == 'Booked' and booking['Pitch Name'] == pitch_name]
+        booked_slots = [booking.get('Date/Time', '') for booking in bookings 
+                       if booking.get('Status') == 'Booked' and booking.get('Pitch Name') == pitch_name]
 
         # Remove booked slots from available slots
         return [slot for slot in available_slots if slot not in booked_slots]
 
     def is_slot_available(self, pitch_name: str, time_slot: str) -> bool:
         """Check if a specific time slot is available for a pitch"""
+        if not self.bookings_sheet:
+            return True
         try:
             bookings = self.bookings_sheet.get_all_records()
         except IndexError:  # Handles empty sheet case
             bookings = []
             
         for booking in bookings:
-            if (booking['Status'] == 'Booked' and 
-                booking['Date/Time'] == time_slot and 
-                booking['Pitch Name'] == pitch_name):
+            if (booking.get('Status') == 'Booked' and 
+                booking.get('Date/Time') == time_slot and 
+                booking.get('Pitch Name') == pitch_name):
                 return False
         return True
 
     def add_booking(self, user_id: str, user_name: str, phone_number: str, 
                    pitch_name: str, time_slot: str, status: str = 'Booked') -> bool:
         """Add a new booking to the Bookings sheet"""
+        if not self.bookings_sheet:
+            self.logger.error('Bookings sheet not initialized')
+            return False
         try:
             self.bookings_sheet.append_row([
                 user_id, 
